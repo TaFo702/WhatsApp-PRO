@@ -599,10 +599,40 @@
         );
       };
       
-      const TargetArchiveSelector = ({ targetArchive, setTargetArchive }) => {
+      const TargetArchiveSelector = ({ targetArchive, setTargetArchive, existingData = [] }) => {
+        // Extract unique values for autocomplete
+        const suggestions = useMemo(() => {
+            const s = { cities: new Set(), districts: new Set(), sectors: new Set() };
+            existingData.forEach(c => {
+                // Normalize for suggestion list
+                if(c.city) s.cities.add(toTurkishTitleCase(c.city));
+                if(c.district) s.districts.add(toTurkishTitleCase(c.district));
+                if(c.sector) s.sectors.add(toTurkishTitleCase(c.sector));
+            });
+            return {
+                cities: [...s.cities].sort(),
+                districts: [...s.districts].sort(),
+                sectors: [...s.sectors].sort()
+            };
+        }, [existingData]);
+
+        // Helper to title case turkish string
+        const toTurkishTitleCase = (str) => {
+            if (!str) return "";
+            return str.toLocaleLowerCase('tr-TR').split(' ').map(word =>
+                word.charAt(0).toLocaleUpperCase('tr-TR') + word.slice(1)
+            ).join(' ');
+        };
+
         const handleInputChange = (e) => {
             const { name, value } = e.target;
             setTargetArchive(prev => ({ ...prev, [name]: value }));
+        };
+        
+        // Auto-correct casing on blur
+        const handleBlur = (e) => {
+             const { name, value } = e.target;
+             setTargetArchive(prev => ({ ...prev, [name]: toTurkishTitleCase(value) }));
         };
 
         const inputClass = "block w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-sky-500 focus:border-sky-500 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white";
@@ -614,15 +644,18 @@
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                         <label htmlFor="target-city" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Şehir</label>
-                        <input type="text" id="target-city" name="city" value={targetArchive.city} onChange={handleInputChange} className={inputClass} placeholder="Şehir girin..." />
+                        <input type="text" id="target-city" name="city" list="suggestions-city" value={targetArchive.city} onChange={handleInputChange} onBlur={handleBlur} className={inputClass} placeholder="Şehir girin..." />
+                        <datalist id="suggestions-city">{suggestions.cities.map(item => <option key={item} value={item} />)}</datalist>
                     </div>
                     <div>
                         <label htmlFor="target-district" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">İlçe</label>
-                        <input type="text" id="target-district" name="district" value={targetArchive.district} onChange={handleInputChange} className={inputClass} placeholder="İlçe girin..." />
+                        <input type="text" id="target-district" name="district" list="suggestions-district" value={targetArchive.district} onChange={handleInputChange} onBlur={handleBlur} className={inputClass} placeholder="İlçe girin..." />
+                        <datalist id="suggestions-district">{suggestions.districts.map(item => <option key={item} value={item} />)}</datalist>
                     </div>
                     <div>
                         <label htmlFor="target-sector" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sektör</label>
-                        <input type="text" id="target-sector" name="sector" value={targetArchive.sector} onChange={handleInputChange} className={inputClass} placeholder="Sektör girin..." />
+                        <input type="text" id="target-sector" name="sector" list="suggestions-sector" value={targetArchive.sector} onChange={handleInputChange} onBlur={handleBlur} className={inputClass} placeholder="Sektör girin..." />
+                         <datalist id="suggestions-sector">{suggestions.sectors.map(item => <option key={item} value={item} />)}</datalist>
                     </div>
                 </div>
             </div>
@@ -783,7 +816,7 @@
           return (
               <div className="space-y-8">
                   <div className="space-y-6">
-                      <TargetArchiveSelector targetArchive={targetArchive} setTargetArchive={setTargetArchive} />
+                      <TargetArchiveSelector targetArchive={targetArchive} setTargetArchive={setTargetArchive} existingData={allCompanies} />
                       
                       <div>
                           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">2. Adım: Firmaları Aktarın</h3>
